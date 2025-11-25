@@ -35,7 +35,7 @@ jobs:
             echo "==> Preparing deployment directory"
             if [ ! -d "$DEPLOY_DIR" ]; then
               echo "Cloning repository..."
-              git clone "$REPO_URL" "$DEPLOY_DIR"
+              git clone --recurse-submodules "$REPO_URL" "$DEPLOY_DIR"
             fi
             
             cd "$DEPLOY_DIR"
@@ -44,6 +44,14 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             git clean -fd
+            
+            echo "==> Initializing and updating submodules"
+            git submodule sync --recursive
+            git submodule update --init --recursive --force
+            
+            echo "==> Verifying submodules"
+            git submodule status
+            ls -la porto/ server-monitoring/
             
             echo "==> Creating environment files"
             cat > .env << 'EOL'
@@ -144,6 +152,7 @@ jobs:
             
             echo "==> Deployment failed, rolling back"
             git reset --hard HEAD~1
+            git submodule update --init --recursive --force
             
             docker compose down
             docker compose up -d
