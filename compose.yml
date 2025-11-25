@@ -28,8 +28,6 @@ services:
     container_name: server-monitoring
     ports:
       - "8081:8081"
-    volumes:
-      - ./server-monitoring:/app:ro
     restart: unless-stopped
     
     healthcheck:
