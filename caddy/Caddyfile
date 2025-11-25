@@ -1,21 +1,13 @@
-# Caddyfile
-# Replace `example.com` with your domain. For local testing use `localhost`.
-
-example.com {
-    # Proxy websocket endpoints to the Go monitoring service
+wign.cloud {
     reverse_proxy /ws/* server-monitoring:8081
 
-    # Proxy any API paths to the monitoring backend (if used)
     reverse_proxy /api/* server-monitoring:8081
 
-    # Everything else -> frontend dev server
     reverse_proxy /* porto:3000
 
-    # Use TLS from mounted certs (optional). When using Let's Encrypt, remove the `tls` line.
     tls /etc/caddy/certs/Origin-Certificate.pem /etc/caddy/certs/Private-Key.pem
 }
 
-# Local development host (no TLS). Keep this block for testing on localhost.
 localhost {
     reverse_proxy /ws/* server-monitoring:8081
     reverse_proxy /api/* server-monitoring:8081
