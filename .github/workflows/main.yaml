@@ -57,9 +57,17 @@ jobs:
               rm -rf server-monitoring
             fi
             
+            echo "==> Configuring Git credentials"
+            git config --global credential.helper store
+            echo "https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com" > ~/.git-credentials
+            
             echo "==> Initializing and updating submodules"
             git submodule sync --recursive
             git submodule update --init --recursive --force
+            
+            echo "==> Cleaning up credentials"
+            rm -f ~/.git-credentials
+            git config --global --unset credential.helper
             
             echo "==> Verifying submodules"
             git submodule status
