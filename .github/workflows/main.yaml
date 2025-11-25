@@ -67,7 +67,7 @@ jobs:
             echo "Updating ONLY server-monitoring submodule..."
             git config --global url."https://${{ secrets.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
             git submodule sync --recursive
-            git submodule update --init server-monitoring --force
+            git submodule update --init --force server-monitoring
             git config --global --unset url."https://${{ secrets.GH_TOKEN }}@github.com/".insteadOf
             
             echo "Submodules updated successfully"
