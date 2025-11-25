@@ -58,18 +58,16 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
-            # Clean corrupted submodule directories
-            for submodule in porto server-monitoring; do
-              if [ -d "$submodule" ] && [ ! -d "$submodule/.git" ]; then
-                echo "Removing corrupted $submodule directory..."
-                rm -rf "$submodule"
-              fi
-            done
+            # REMOVE PORTO SUBMODULE IF EXISTS
+            if [ -d "porto" ]; then
+              echo "Removing porto submodule..."
+              rm -rf porto
+            fi
             
-            echo "Updating submodules..."
+            echo "Updating ONLY server-monitoring submodule..."
             git config --global url."https://${{ secrets.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
             git submodule sync --recursive
-            git submodule update --init --recursive --force
+            git submodule update --init server-monitoring --force
             git config --global --unset url."https://${{ secrets.GH_TOKEN }}@github.com/".insteadOf
             
             echo "Submodules updated successfully"
@@ -94,35 +92,20 @@ jobs:
             
             chmod 600 cert/Origin-Certificate.pem cert/Private-Key.pem
             
-            # Validate certificates
-            if openssl x509 -in cert/Origin-Certificate.pem -noout -text > /dev/null 2>&1; then
-              echo "SSL certificate valid"
-            else
-              echo "SSL certificate invalid"
-              exit 1
-            fi
-            
-            if openssl rsa -in cert/Private-Key.pem -check -noout > /dev/null 2>&1; then
-              echo "Private key valid"
-            else
-              echo "Private key invalid"
-              exit 1
-            fi
-            
             echo "Stopping existing containers..."
             docker compose down --remove-orphans || true
             
-            echo "Pruning old Docker resources..."
+            echo "Pruning Docker..."
             docker system prune -af --volumes || true
             
-            echo "Building Docker images..."
+            echo "Building services (SERVER ONLY)..."
             docker compose build --no-cache --pull
             
             echo "Starting services..."
             docker compose up -d --force-recreate
             
-            echo "Waiting for services to be healthy..."
-            timeout 120 sh -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done' || echo "Health check timeout"
+            echo "Waiting for services..."
+            timeout 120 sh -c 'until docker compose ps | grep -q "server-monitoring"; do sleep 2; done' || echo "Health check timeout"
             
             echo ""
             echo "DEPLOYMENT COMPLETED SUCCESSFULLY"
@@ -130,9 +113,6 @@ jobs:
             echo ""
             echo "Recent logs:"
             docker compose logs --tail=30
-            
-            # Cleanup
-            docker image prune -af || true
 
       - name: Health Check
         if: success()
@@ -150,12 +130,6 @@ jobs:
             
             echo ""
             echo "Testing Endpoints"
-            if curl -f -s http://localhost:3000 > /dev/null; then
-              echo "Porto: Healthy"
-            else
-              echo "Porto: Not responding"
-            fi
-            
             if curl -f -s http://localhost:8081/health > /dev/null; then
               echo "Monitoring: Healthy"
             else
@@ -165,29 +139,6 @@ jobs:
             echo ""
             echo "SSL Certificate Information"
             openssl x509 -in cert/Origin-Certificate.pem -noout -dates -subject 2>/dev/null || echo "Unable to read certificate"
-
-      - name: Rollback on Failure
-        if: failure()
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT }}
-          script: |
-            cd "${{ env.DEPLOY_DIR }}"
-            
-            echo "DEPLOYMENT FAILED - INITIATING ROLLBACK"
-            
-            git reset --hard HEAD~1
-            git submodule update --init --recursive --force
-            
-            docker compose down
-            docker compose up -d
-            
-            echo ""
-            echo "Rollback completed"
-            docker compose ps
 
       - name: Secure Sensitive Files
         if: always()
@@ -199,12 +150,8 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd "${{ env.DEPLOY_DIR }}"
-            
-            echo "Securing sensitive files..."
             chmod 600 .env 2>/dev/null || true
             chmod 600 cert/*.pem 2>/dev/null || true
-            
-            echo "File permissions secured"
 
       - name: Deployment Summary
         if: always()

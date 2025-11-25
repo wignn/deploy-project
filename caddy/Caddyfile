@@ -1,27 +1,23 @@
-wign.cloud {
+
+
+
+
+api.ws.wign.cloud {
     encode gzip
-
-    #  API & Websocket 
-    reverse_proxy /ws/* server-monitoring:8081
-    reverse_proxy /api/* server-monitoring:8081
-
-    #  React Frontend (SPA) 
-    root * /app/build
-    file_server
-
-    try_files {path} /index.html
-
-    tls /etc/caddy/certs/Origin-Certificate.pem /etc/caddy/certs/Private-Key.pem
+    reverse_proxy server-monitoring:8081
+    tls {
+        issuer acme
+    }
 }
 
 localhost {
     encode gzip
 
-    reverse_proxy /ws/* server-monitoring:8081
-    reverse_proxy /api/* server-monitoring:8081
+    handle_path /ws/* {
+        reverse_proxy server-monitoring:8081
+    }
 
-    root * /app/build
-    file_server
-
-    try_files {path} /index.html
+    handle_path /api/* {
+        reverse_proxy server-monitoring:8081
+    }
 }

@@ -1,6 +1,3 @@
 [submodule "server-monitoring"]
 	path = server-monitoring
 	url = https://github.com/wignn/go-s.git
-[submodule "porto"]
-	path = porto
-	url = https://github.com/wignn/porto.git
