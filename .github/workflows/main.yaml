@@ -53,11 +53,12 @@ jobs:
               cd "$DEPLOY_DIR"
             fi
             
-
+            echo "Fetching latest changes..."
             git fetch origin
             git reset --hard origin/main
             git clean -fd
             
+            # Clean corrupted submodule directories
             for submodule in porto server-monitoring; do
               if [ -d "$submodule" ] && [ ! -d "$submodule/.git" ]; then
                 echo "Removing corrupted $submodule directory..."
@@ -73,7 +74,7 @@ jobs:
             
             echo "Submodules updated successfully"
             git submodule status
-
+            
             echo "Creating environment files..."
             cat > .env << 'EOL'
             ${{ secrets.ENV_GLOBAL }}
@@ -107,7 +108,7 @@ jobs:
               echo "Private key invalid"
               exit 1
             fi
-
+            
             echo "Stopping existing containers..."
             docker compose down --remove-orphans || true
             
@@ -120,7 +121,6 @@ jobs:
             echo "Starting services..."
             docker compose up -d --force-recreate
             
-            # HEALTH CHECK
             echo "Waiting for services to be healthy..."
             timeout 120 sh -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done' || echo "Health check timeout"
             
@@ -178,6 +178,7 @@ jobs:
             cd "${{ env.DEPLOY_DIR }}"
             
             echo "DEPLOYMENT FAILED - INITIATING ROLLBACK"
+            
             git reset --hard HEAD~1
             git submodule update --init --recursive --force
             
@@ -215,7 +216,6 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             echo ""
-            echo "DEPLOYMENT SUMMARY"
             echo "Status      : ${{ job.status }}"
             echo "Commit      : ${{ github.sha }}"
             echo "Branch      : ${{ github.ref_name }}"
