@@ -33,12 +33,24 @@ jobs:
             REPO_URL="https://github.com/${{ github.repository }}.git"
             
             echo "==> Preparing deployment directory"
-            if [ ! -d "$DEPLOY_DIR" ]; then
+            
+            if [ -d "$DEPLOY_DIR" ]; then
+              cd "$DEPLOY_DIR"
+              if ! git rev-parse --git-dir > /dev/null 2>&1; then
+                echo "Directory exists but is not a git repository. Removing..."
+                cd ..
+                rm -rf "$DEPLOY_DIR"
+                echo "Cloning repository..."
+                git clone --recurse-submodules "$REPO_URL" "$DEPLOY_DIR"
+                cd "$DEPLOY_DIR"
+              else
+                echo "Valid git repository found"
+              fi
+            else
               echo "Cloning repository..."
               git clone --recurse-submodules "$REPO_URL" "$DEPLOY_DIR"
+              cd "$DEPLOY_DIR"
             fi
-            
-            cd "$DEPLOY_DIR"
             
             echo "==> Fetching latest changes"
             git fetch origin
@@ -46,7 +58,6 @@ jobs:
             git clean -fd
             
             echo "==> Cleaning submodule directories"
-            # Remove existing submodule directories if they're not proper git repos
             if [ -d "porto" ] && [ ! -d "porto/.git" ]; then
               echo "Removing corrupted porto directory..."
               rm -rf porto
@@ -58,6 +69,7 @@ jobs:
             fi
             
             echo "==> Configuring Git for submodules"
+            # Configure git to use token in URL
             git config --global url."https://${{ secrets.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
             
             echo "==> Initializing and updating submodules"
