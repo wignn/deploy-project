@@ -1,15 +1,27 @@
 wign.cloud {
-    reverse_proxy /ws/* server-monitoring:8081
+    encode gzip
 
+    #  API & Websocket 
+    reverse_proxy /ws/* server-monitoring:8081
     reverse_proxy /api/* server-monitoring:8081
 
-    reverse_proxy /* porto:3000
+    #  React Frontend (SPA) 
+    root * /app/build
+    file_server
+
+    try_files {path} /index.html
 
     tls /etc/caddy/certs/Origin-Certificate.pem /etc/caddy/certs/Private-Key.pem
 }
 
 localhost {
+    encode gzip
+
     reverse_proxy /ws/* server-monitoring:8081
     reverse_proxy /api/* server-monitoring:8081
-    reverse_proxy /* porto:3000
+
+    root * /app/build
+    file_server
+
+    try_files {path} /index.html
 }
