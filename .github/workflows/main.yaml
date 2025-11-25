@@ -45,6 +45,18 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
+            echo "==> Cleaning submodule directories"
+            # Remove existing submodule directories if they're not proper git repos
+            if [ -d "porto" ] && [ ! -d "porto/.git" ]; then
+              echo "Removing corrupted porto directory..."
+              rm -rf porto
+            fi
+            
+            if [ -d "server-monitoring" ] && [ ! -d "server-monitoring/.git" ]; then
+              echo "Removing corrupted server-monitoring directory..."
+              rm -rf server-monitoring
+            fi
+            
             echo "==> Initializing and updating submodules"
             git submodule sync --recursive
             git submodule update --init --recursive --force
@@ -56,16 +68,6 @@ jobs:
             echo "==> Creating environment files"
             cat > .env << 'EOL'
             ${{ secrets.ENV_GLOBAL }}
-            EOL
-            
-            mkdir -p porto
-            cat > porto/.env.local << 'EOL'
-            ${{ secrets.ENV_PORTO }}
-            EOL
-            
-            mkdir -p server-monitoring
-            cat > server-monitoring/.env.local << 'EOL'
-            ${{ secrets.ENV_MONITORING }}
             EOL
             
             echo "==> Creating SSL certificates"
@@ -84,7 +86,7 @@ jobs:
             chmod 600 cert/Private-Key.pem
             
             echo "==> Verifying files"
-            ls -la .env porto/.env.local server-monitoring/.env.local
+            ls -la .env
             ls -la cert/
             
             echo "==> Validating SSL certificates"
@@ -172,7 +174,7 @@ jobs:
             cd "${{ env.DEPLOY_DIR }}"
             
             echo "==> Securing sensitive files"
-            chmod 600 .env porto/.env.local server-monitoring/.env.local 2>/dev/null || true
+            chmod 600 .env 2>/dev/null || true
             chmod 600 cert/*.pem 2>/dev/null || true
             
             echo "==> File permissions set"
