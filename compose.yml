@@ -4,6 +4,8 @@ services:
       context: ./server-monitoring
       dockerfile: Dockerfile
     container_name: server-monitoring
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     ports:
       - "8081:8081"
     restart: unless-stopped
